@@ -20,14 +20,14 @@ def load_meta_data(raw: Mapping) -> dict:
 
         # 2) If it's a mapping, recurse
         elif isinstance(v, Mapping):
-            loaded[k] = load_mapping(v)
+            loaded[k] = load_meta_data(v)
 
         # 3) If it's a non‐string sequence, recurse into items
         elif isinstance(v, Sequence):
             new_list = []
             for item in v:
                 if isinstance(item, Mapping):
-                    new_list.append(load_mapping(item))
+                    new_list.append(load_meta_data(item))
                 else:
                     new_list.append(item)
             loaded[k] = new_list
@@ -38,7 +38,7 @@ def load_meta_data(raw: Mapping) -> dict:
 
     return loaded
 
-def print_meta(d: Mapping, indent: int = 0, recursive: bool = False, verbose: bool = False):
+def print_meta(d: Mapping, indent: int = 0, verbose: bool = False):
     all_keys = list(d.keys())
     # split into visible vs hidden
     visible_keys = [k for k in all_keys if not k.startswith('.')]
@@ -69,9 +69,9 @@ def print_meta(d: Mapping, indent: int = 0, recursive: bool = False, verbose: bo
         dict_keys   = []
         for k in keys:
             v = d[k]
-            if recursive and isinstance(v, Mapping):
+            if isinstance(v, Mapping):
                 dict_keys.append(k)
-            elif recursive and isinstance(v, Sequence) and not isinstance(v, str):
+            elif isinstance(v, Sequence) and not isinstance(v, str):
                 list_keys.append(k)
             else:
                 simple_keys.append(k)
@@ -96,13 +96,13 @@ def print_meta(d: Mapping, indent: int = 0, recursive: bool = False, verbose: bo
             print("  " * indent + fmt(k))
             for item in v:
                 if isinstance(item, Mapping):
-                    print_meta(item, indent + 1, recursive, verbose)
+                    print_meta(item, indent + 1, verbose)
                 else:
                     print("  " * (indent + 1) + f"- {item}")
 
         for k in dict_keys:
             print("  " * indent + fmt(k))
-            print_meta(d[k], indent + 1, recursive, verbose)
+            print_meta(d[k], indent + 1, verbose)
 
 class OnnxInfer:
     def __init__(self, onnx_model_path, input_name="obs", awd=False):
@@ -116,6 +116,7 @@ class OnnxInfer:
         self.awd = awd
 
         meta = {
+            "Model":         os.path.basename(onnx_model_path),
             "Producer name": self.meta.producer_name,
             "Domain":        self.meta.domain,
             "Description":   self.meta.description,
@@ -154,9 +155,7 @@ class OnnxInfer:
         except ValueError:
             raise ValueError(f"Expected integer metadata for 'nb_steps_in_period', got: {raw!r}")
 
-        print(f"===== {os.path.basename(onnx_model_path)} =====")
-        filtered = {k: v for k, v in meta.items() if k in ['Authors', 'Discord', 'Domain', 'Graph name', 'Robot', 'URL', 'Version']}
-        print_meta(filtered, 0)
+        print_meta(info, 0)
 
     def infer(self, inputs):
         if self.awd:
