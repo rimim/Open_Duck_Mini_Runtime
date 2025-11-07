@@ -132,7 +132,7 @@ class OnnxInfer:
         self.initial_action_pose = info['.InitialActionPose']
         self.joints = info['.Joints']
         self.contacts = info.get('.Contacts', False)
-        self.quat = info.get('.Quat', True)
+        self.quat = info.get('.Quat', False)
 
         config = info['.Config']
         self.sim_dt = config['sim_dt']
